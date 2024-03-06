@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Table with Filter</title>
+<style>
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background-color: #f9f9f9;
+        transition: background-color 0.3s ease;
+    }
+
+    body.dark-mode {
+        background-color: #121212;
+        color: #fff;
+    }
+
+    #title-search-container {
+        padding: 20px;
+        background-color: #f0f0f0;
+        border-bottom: 1px solid #ddd;
+        border-radius: 10px 10px 0 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    h2 {
+        margin: 0;
+    }
+
+    #search-container {
+        display: flex;
+        align-items: center;
+        position: relative;
+    }
+
+    #search-input {
+        padding: 8px;
+        border-radius: 5px;
+        border: 1px solid #ddd;
+        font-size: 16px;
+        margin-left: 20px;
+    }
+
+    #picture {
+        max-width: 80px;
+        max-height: 80px;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        border-radius: 0 0 10px 10px;
+        overflow: hidden;
+    }
+
+    th, td {
+        border: 1px solid #dddddd;
+        text-align: left;
+        padding: 8px;
+    }
+
+    tr:nth-child(even) {
+        background-color: #f2f2f2;
+    }
+
+    #mode-toggle {
+        padding: 8px 12px;
+        font-size: 16px;
+        background-color: #007bff;
+        color: #fff;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+
+    .add-provider-btn {
+        position: absolute;
+        right: -50px; /* Adjusted right position */
+        padding: 8px;
+        width: 35px; /* Equal width and height */
+        height: 35px; /* Equal width and height */
+        font-size: 16px;
+        background-color: #007bff;
+        color: #fff;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+
+    .add-provider-btn:hover {
+        background-color: #0056b3;
+    }
+
+    /* Styles for dark mode */
+    body.dark-mode #title-search-container {
+        background-color: #333;
+        border-bottom: 1px solid #555;
+    }
+
+    body.dark-mode th, body.dark-mode td {
+        border-color: #555;
+    }
+
+    body.dark-mode tr:nth-child(even) {
+        background-color: #222;
+    }
+
+    /* Modal styles */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0,0,0,0.4);
+    }
+
+    .modal-content {
+        background-color: #fefefe;
+        margin: 15% auto;
+        padding: 20px;
+        border: 1px solid #888;
+        border-radius: 5px;
+        width: 50%;
+        max-height: 80%; /* Adjusted maximum height */
+        overflow-y: auto; /* Added overflow-y to enable scrolling */
+    }
+
+    .modal-content.dark-mode {
+        background-color: #333; /* Dark mode background color for modal content */
+        color: #fff; /* Text color for dark mode modal content */
+        border-color: #555; /* Border color for dark mode modal content */
+    }
+
+    .close {
+        color: #aaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+    }
+
+    .close:hover,
+    .close:focus {
+        color: black;
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+    .register-btn {
+        padding: 8px 12px;
+        font-size: 16px;
+        background-color: green;
+        color: #fff;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+
+    .delete-btn {
+        padding: 8px;
+        font-size: 16px;
+        background-color: red;
+        color: #fff;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+
+    .delete-btn:hover {
+        background-color: #b30000;
+    }
+
+    .error-msg {
+        color: red;
+    }
+
+    /* Dropdown menu styles */
+    select {
+        padding: 8px;
+        border-radius: 5px;
+        border: 1px solid #ddd;
+        font-size: 16px;
+        margin-top: 10px;
+    }
+
+    select.dark-mode {
+        background-color: #333; /* Dark mode background color for dropdown menu */
+        color: #fff; /* Text color for dark mode dropdown menu */
+        border-color: #555; /* Border color for dark mode dropdown menu */
+    }
+</style>
+</head>
+<body>
+
+<div id="title-search-container">
+    <h2>Relação de Fornecedores</h2>
+    <div id="search-container">
+        <input type="text" id="search-input" onkeyup="filterTable()" placeholder="Pesquisar...">
+        <button class="add-provider-btn" onclick="openModal()">+</button>
+    </div>
+    <button id="mode-toggle" onclick="toggleMode()">Interface</button>
+</div>
+
+<table id="myTable">
+  <tr>
+    <th>Fornecedor</th>
+    <th>Categoria</th>
+    <th>Subcategoria</th>
+    <th>Contato</th>
+    <th></th> <!-- Empty column for delete button -->
+  </tr>
+  <!-- Data rows will be dynamically added here -->
+</table>
+
+<!-- Modal -->
+<div id="myModal" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="closeModal()">&times;</span>
+    <h3>Adicionar Fornecedor</h3>
+    <div id="error-message"></div>
+    <input type="text" id="provider-input" placeholder="Nome do Fornecedor"><br><br>
+    <select id="category-input" class="category-dropdown">
+        <option value="Elétrica">Elétrica</option>
+        <option value="Eletrônica">Eletrônica</option>
+        <option value="Mecânica">Mecânica</option>
+        <option value="Pneumática">Pneumática</option>
+    </select><br><br>
+    <input type="text" id="subcategory-input" placeholder="Subcategoria"><br><br>
+    <input type="text" id="contact-input" placeholder="Contato"><br><br>
+    <button class="register-btn" onclick="registerProvider()">Registrar novo fornecedor</button>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // Retrieve data from local storage and populate the table
+    var providersData = JSON.parse(localStorage.getItem("providersData"));
+    if (providersData) {
+        providersData.forEach(function(data) {
+            addProviderRow(data.provider, data.category, data.subcategory, data.contact);
+        });
+    }
+});
+
+function filterTable() {
+    var input, filter, table, tr, td, i, txtValue;
+    input = document.getElementById("search-input");
+    filter = input.value.toUpperCase();
+    table = document.getElementById("myTable");
+    tr = table.getElementsByTagName("tr");
+    for (i = 0; i < tr.length; i++) {
+        td = tr[i].getElementsByTagName("td");
+        for (var j = 0; j < td.length; j++) {
+            let cell = td[j];
+            if (cell) {
+                txtValue = cell.textContent || cell.innerText;
+                if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                    tr[i].style.display = "";
+                    break;
+                } else {
+                    tr[i].style.display = "none";
+                }
+            }
+        }
+    }
+}
+
+function toggleMode() {
+    var body = document.body;
+    body.classList.toggle("dark-mode");
+    var modalContent = document.querySelector(".modal-content");
+    modalContent.classList.toggle("dark-mode");
+}
+
+// Modal functions
+var modal = document.getElementById("myModal");
+
+function openModal() {
+    modal.style.display = "block";
+}
+
+function closeModal() {
+    modal.style.display = "none";
+    clearInputFields();
+    clearErrorMessage();
+}
+
+function registerProvider() {
+    var providerInput = document.getElementById("provider-input").value.trim();
+    var categoryInput = document.getElementById("category-input").value.trim();
+    var subcategoryInput = document.getElementById("subcategory-input").value.trim();
+    var contactInput = document.getElementById("contact-input").value.trim();
+    var errorMessage = document.getElementById("error-message");
+
+    if (providerInput === "" || categoryInput === "" || subcategoryInput === "" || contactInput === "") {
+        errorMessage.textContent = "Por favor preencha todos os campos.";
+    } else {
+        errorMessage.textContent = "";
+        addProviderRow(providerInput, categoryInput, subcategoryInput, contactInput);
+        saveDataToLocalStorage(providerInput, categoryInput, subcategoryInput, contactInput);
+        closeModal();
+    }
+}
+
+function addProviderRow(provider, category, subcategory, contact) {
+    var table = document.getElementById("myTable");
+    var row = table.insertRow(-1);
+    var cell1 = row.insertCell(0);
+    var cell2 = row.insertCell(1);
+    var cell3 = row.insertCell(2);
+    var cell4 = row.insertCell(3);
+    var cell5 = row.insertCell(4);
+    cell1.textContent = provider;
+    cell2.textContent = category;
+    cell3.textContent = subcategory;
+    cell4.textContent = contact;
+    cell5.innerHTML = '<button class="delete-btn" onclick="deleteRow(this)">Delete</button>'; // Delete button
+}
+
+function deleteRow(button) {
+    var row = button.parentNode.parentNode;
+    row.parentNode.removeChild(row);
+    // Remove corresponding data from localStorage
+    var providersData = JSON.parse(localStorage.getItem("providersData")) || [];
+    var rowIndex = row.rowIndex - 1; // Adjusted index for headers
+    providersData.splice(rowIndex, 1);
+    localStorage.setItem("providersData", JSON.stringify(providersData));
+}
+
+function saveDataToLocalStorage(provider, category, subcategory, contact) {
+    var providersData = JSON.parse(localStorage.getItem("providersData")) || [];
+    providersData.push({ provider: provider, category: category, subcategory: subcategory, contact: contact });
+    localStorage.setItem("providersData", JSON.stringify(providersData));
+}
+
+function clearInputFields() {
+    document.getElementById("provider-input").value = "";
+    document.getElementById("category-input").value = "";
+    document.getElementById("subcategory-input").value = "";
+    document.getElementById("contact-input").value = "";
+}
+
+function clearErrorMessage() {
+    document.getElementById("error-message").textContent = "";
+}
+</script>
+
+</body>
+</html>
